@@ -1,0 +1,10 @@
+.App {
+    text-align: center;
+}
+
+.vertical-container {
+    display: lick;
+    background: #a84909;
+    border-radius: 30px;
+    vertical-align: middle;
+}
