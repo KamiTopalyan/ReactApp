@@ -1,10 +1,31 @@
+body {
+    background-color: black;
+}
+
 .App {
     text-align: center;
 }
 
 .vertical-container {
-    display: lick;
-    background: #a84909;
+    display: flexbox;
+    width: fit-content;
+    max-width: 300px;
+    height: auto;
+    vertical-align: center;
     border-radius: 30px;
-    vertical-align: middle;
+    padding: 1rem;
+    border: azure solid 1px;
+}
+
+.item {
+    padding: 10px;
+    background-color: azure;
+    border-radius: 30px;
+    max-width: 200px;
+    margin: 5px;
+}
+
+.item:hover {
+    background-color: rgb(221, 230, 230);
+    cursor: grab;
 }
