@@ -1,12 +1,13 @@
-import "./App.css";
-import { React, useEffect, useState, Component } from "react";
+import React, { useState } from "react";
+import ReactDOM from "react-dom";
+import "./App.css"
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
-const getItems = count =>
+// fake data generator
+const getItems = (count, offset = 0) =>
   Array.from({ length: count }, (v, k) => k).map(k => ({
-    id: `item-${k}`,
-    content: `item ${k}`
-
+    id: `item-${k + offset}-${new Date().getTime()}`,
+    content: `item ${k + offset}`
   }));
 
 const reorder = (list, startIndex, endIndex) => {
@@ -17,68 +18,166 @@ const reorder = (list, startIndex, endIndex) => {
   return result;
 };
 
-export default class App extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      items: ["drag1", "drag2", "drag3"]
-    };
-    this.onDragEnd = this.onDragEnd.bind(this);
+
+/**
+ * Moves an item from one list to another list.
+ */
+const move = (source, destination, droppableSource, droppableDestination) => {
+  const sourceClone = Array.from(source);
+  const destClone = Array.from(destination);
+  const [removed] = sourceClone.splice(droppableSource.index, 1);
+
+  destClone.splice(droppableDestination.index, 0, removed);
+
+  const result = {};
+  result[droppableSource.droppableId] = sourceClone;
+  result[droppableDestination.droppableId] = destClone;
+
+  return result;
+};
+const grid = 8;
+
+const getItemStyle = (isDragging, draggableStyle) => ({
+  // some basic styles to make the items look a bit nicer
+
+  // change background colour if dragging
+  "background-color": isDragging ? "pink" : "azure" ,
+
+  // styles we need to apply on draggables
+  ...draggableStyle
+});
+const getListStyle = isDraggingOver => ({
+  background: isDraggingOver ? "grey" : "black",
+  padding: grid,
+  "min-width": 250
+});
+
+function App() {
+  const [state, setState] = useState([getItems(10), getItems(5, 10)]);
+
+  function itemHandler() {
+
   }
 
-  onDragEnd(result) {   
+
+  function onDragEnd(result) {
+    const { source, destination } = result;
+
     // dropped outside the list
-    if (!result.destination) {
+    if (!destination) {
       return;
     }
+    const sInd = +source.droppableId;
+    const dInd = +destination.droppableId;
 
-    const items = reorder(
-      this.state.items,
-      result.source.index,
-      result.destination.index
-    );
+    if (sInd === dInd) {
+      const items = reorder(state[sInd], source.index, destination.index);
+      const newState = [...state];
+      newState[sInd] = items;
+      setState(newState);
+    } else {
+      const result = move(state[sInd], state[dInd], source, destination);
+      const newState = [...state];
+      newState[sInd] = result[sInd];
+      newState[dInd] = result[dInd];
 
-    this.setState({
-      items
-    });
+      setState(newState.filter(group => group.length));
+    }
   }
 
-  render() {
-    return (
-    <div className="App">
-      <DragDropContext onDragEnd={this.onDragEnd}>
-      <Droppable droppableId="droppable-1">
-            {(provided, snapshot) => (
-              <div 
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-              className="vertical-container"
-              >
-              {this.state.items.map((item, index) => (
-                <Draggable key={item.id} draggableId={item.id} index={index}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      style={getItemStyle(
-                        snapshot.isDragging,
-                        provided.draggableProps.style
-                      )}
+  function updateText() {
+    
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => {
+          setState([...state, []]);
+        }}
+      >
+        Add new group
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          state[0].push(getItems(1)[0])
+          console.log(state[0][11])
+          setState([...state]);
+        }}
+      >
+        Add new item
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          console.log(state)
+        }}
+      >
+        Debug Log
+      </button>
+      <div style={{ display: "flex" }}>
+        <DragDropContext onDragEnd={onDragEnd}>
+          {state.map((el, ind) => (
+            <Droppable key={ind} droppableId={`${ind}`}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  style={getListStyle(snapshot.isDraggingOver)}
+                  {...provided.droppableProps}
+                  className="vertical-container"
+                >
+                  {el.map((item, index) => (
+                    <Draggable
+                      key={item.id}
+                      draggableId={item.id}
+                      index={index}
                     >
-                      {item.content}
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-                {provided.placeholder}
-              </div>
-            )}  
-        </Droppable>
-      </DragDropContext>
+                      {(provided, snapshot) => (
+                        <div
+                          className="item"
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={getItemStyle(
+                            snapshot.isDragging,
+                            provided.draggableProps.style
+                          )}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-around"
+                            }}
+                          >
+                            <textarea id={item.id} contentEditable="true" inputmode="number" onChange={updateText}>{item.content}</textarea>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newState = [...state];
+                                newState[ind].splice(index, 1);
+                                setState(
+                                  newState.filter(group => group.length)
+                                );
+                              }}
+                            >
+                              delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          ))}
+        </DragDropContext>
+      </div>
     </div>
   );
 }
-}
 
-
+export default App;
